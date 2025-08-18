@@ -1,0 +1,18 @@
+{
+    "name": "GameDrive.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:81e49bcab7eda8744bff475a011e5d5f"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
