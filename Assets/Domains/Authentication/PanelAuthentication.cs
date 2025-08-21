@@ -74,7 +74,7 @@ namespace GameDriveSample
                 PanelLoadingController.Instance.HideLoading(gameObject.name);
 
                 PlayerDataHolder.Instance.SetPlayerData(playerInfo.player, client);
-                PanelsController.Instance.SetPanel(Panels.PlayerAndScore);
+                PanelsController.Instance.SetPanel(Panels.PlayerAssets);
             }, (GameDrive.ErrorSimple error) =>
             {
                 PanelLoadingController.Instance.HideLoading(gameObject.name);

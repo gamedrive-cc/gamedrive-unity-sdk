@@ -8,6 +8,9 @@ namespace GameDriveSample
         [SerializeField]
         private TMPro.TMP_Text _textError;
 
+        [SerializeField]
+        private GameObject _panelTextBg;
+
         public static PanelError Instance { get; private set; }
 
         private void Awake()
@@ -18,7 +21,7 @@ namespace GameDriveSample
         Coroutine hideTextCoroutine;
         public void ShowErrorMessage(string text, float hideInSecond)
         {
-            _textError.gameObject.SetActive(true);
+            _panelTextBg.SetActive(true);
             _textError.text = text;
             if (hideTextCoroutine != null)
             {
@@ -30,7 +33,7 @@ namespace GameDriveSample
         private IEnumerator HideTextInt(float hideInSecond)
         {
             yield return new WaitForSeconds(hideInSecond);
-            _textError.gameObject.SetActive(false);
+            _panelTextBg.SetActive(false);
             hideTextCoroutine = null;
         }
     }

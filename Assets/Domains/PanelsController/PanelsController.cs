@@ -5,7 +5,7 @@ namespace GameDriveSample
     public enum Panels
     {
         Authentication,
-        PlayerAndScore,
+        PlayerAssets,
     }
 
     public class PanelsController : MonoBehaviour
@@ -15,7 +15,8 @@ namespace GameDriveSample
         public static PanelsController Instance;
 
         [SerializeField] private GameObject _panelAuthentication;
-        [SerializeField] private GameObject _panelPlayerAndScore;
+        [SerializeField] private GameObject _panelPlayerAssets;
+        [SerializeField] private GameObject _panelPlayerInfo;
 
         public void Awake()
         {
@@ -30,14 +31,16 @@ namespace GameDriveSample
         public void SetPanel(Panels panels)
         {
             _panelAuthentication.SetActive(false);
-            _panelPlayerAndScore.SetActive(false);
+            _panelPlayerAssets.SetActive(false);
+            _panelPlayerInfo.SetActive(false);
             switch (panels)
             {
                 case Panels.Authentication:
                     _panelAuthentication.SetActive(true);
                     break;
-                case Panels.PlayerAndScore:
-                    _panelPlayerAndScore.SetActive(true);
+                case Panels.PlayerAssets:
+                    _panelPlayerAssets.SetActive(true);
+                    _panelPlayerInfo.SetActive(true);
                     break;
             }
         }
