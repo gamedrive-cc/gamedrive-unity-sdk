@@ -13,10 +13,10 @@ namespace GameDriveSample
 
         public static ClientSelectController Instance;
 
-        public Action<ClientWrapper> ActionClientSelect { get; set; }
+        public Action ActionClientSelect { get; set; }
 
-        Dictionary<string, ClientWrapper> _clients = new Dictionary<string, ClientWrapper>();
-        public ClientWrapper CurrentClientWrapper { get; private set; }
+        Dictionary<string, ClientHolder> _clients = new Dictionary<string, ClientHolder>();
+        public ClientHolder CurrentClient { get; private set; }
         void Awake()
         {
             Instance = this;
@@ -50,11 +50,11 @@ namespace GameDriveSample
             string clientId = clientIdPrefix + id.ToString();
             if (!_clients.ContainsKey(clientId))
             {
-                _clients[clientId] = new ClientWrapper(clientId);
+                _clients[clientId] = new ClientHolder(clientId);
             }
 
-            CurrentClientWrapper = _clients[clientId];
-            ActionClientSelect?.Invoke(CurrentClientWrapper);
+            CurrentClient = _clients[clientId];
+            ActionClientSelect?.Invoke();
         }
     }
 }
