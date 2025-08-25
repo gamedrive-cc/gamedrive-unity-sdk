@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
 namespace GameDrive
@@ -16,11 +18,14 @@ namespace GameDrive
 
         string _encryptionKeyRefreshToken = SystemInfo.deviceUniqueIdentifier;
         public ClientAutoRotateTokensManager ClientAutoRotateTokensManager { get; private set; }
+        public string ClientId { get; private set; }
         public ClientTokensManager(string clientId, Client client)
         {
             _refreshTokenKey = clientId + REFRESH_TOKEN_KEY;
             _accessTokenKey = clientId + ACCESS_TOKEN_KEY;
+            ClientId = clientId;
             ClientAutoRotateTokensManager = new ClientAutoRotateTokensManager(client);
+
             if (string.IsNullOrEmpty(_encryptionKeyRefreshToken))
             {
                 _encryptionKeyRefreshToken = "enocrypt_key_" + clientId;
@@ -32,6 +37,13 @@ namespace GameDrive
         {
             //load from player prefs
             _accessToken = PlayerPrefs.GetString(_accessTokenKey);
+            CoroutineHelper.Instance.StartCoroutine(InitialAutoRotateRefreshTokenCoroutine());
+        }
+
+        IEnumerator InitialAutoRotateRefreshTokenCoroutine()
+        {
+            yield return null;
+            ClientAutoRotateTokensManager.Initialize();
         }
 
 

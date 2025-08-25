@@ -19,6 +19,17 @@ namespace GameDrive
         int _checkInSeconds;
         public bool IsRotating { get; private set; }
 
+        public void Initialize()
+        {
+            LoadToRotateDateTime();
+            CheckToRotate();
+        }
+
+        private string GenerateToRotateDateTimeKey()
+        {
+            return _client.ClientId + "_to_rotate_date_time";
+        }
+
         public void SetAutoRotateInNextSeconds(int expiresInSeconds)
         {
             _checkInSeconds = expiresInSeconds - offsetBeforeExpires;
@@ -28,8 +39,31 @@ namespace GameDrive
                 return;
             }
             DateTime now = DateTime.Now;
-            _toRotateDateTime = now.AddSeconds(_checkInSeconds);
+            SetToRotateDateTime(now.AddSeconds(_checkInSeconds));
             CoroutineHelper.Instance.RestartCoroutine(ref _rotateTokenCoroutine, CheckAndRotateTokenCoroutine(_checkInSeconds + 1));
+        }
+
+        private void SetToRotateDateTime(DateTime dateTime)
+        {
+            _toRotateDateTime = dateTime;
+            string key = GenerateToRotateDateTimeKey();
+            PlayerPrefs.SetString(key, dateTime.ToString());
+        }
+
+        private void LoadToRotateDateTime()
+        {
+            string key = GenerateToRotateDateTimeKey();
+            string _toRotateDateTimeString = PlayerPrefs.GetString(key);
+            if (!string.IsNullOrEmpty(_toRotateDateTimeString))
+            {
+                DateTime parsed = DateTime.Parse(_toRotateDateTimeString);
+                SetToRotateDateTime(parsed);
+            }
+            else
+            {
+                //No rotate if not found so add to rotate higher
+                SetToRotateDateTime(DateTime.Now.AddSeconds(60 * 60));
+            }
         }
 
         IEnumerator CheckAndRotateTokenCoroutine(int checkInSeconds)
