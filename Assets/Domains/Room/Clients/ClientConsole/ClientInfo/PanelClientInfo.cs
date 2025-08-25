@@ -18,8 +18,20 @@ namespace GameDriveSample
 
         private void OnClientSelected()
         {
+            CheckLogin();
+            ShowPlayerInfo();
+        }
+
+        private void CheckLogin()
+        {
             var client = ClientSelectController.Instance.CurrentClient;
-           
+            //require login to get player info
+
+        }
+        private void ShowPlayerInfo()
+        {
+            var client = ClientSelectController.Instance.CurrentClient;
+
         }
     }
 }
