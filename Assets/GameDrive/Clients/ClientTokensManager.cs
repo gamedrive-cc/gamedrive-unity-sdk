@@ -10,8 +10,8 @@ namespace GameDrive
         string _accessToken;
         string _refreshToken;
 
-        const string REFRESH_TOKEN_KEY = "GameDriveRefreshToken";
-        const string ACCESS_TOKEN_KEY = "GameDriveAccessToken";
+        const string REFRESH_TOKEN_KEY = "GameDriveRefreshToken2";
+        const string ACCESS_TOKEN_KEY = "GameDriveAccessToken2";
 
         string _accessTokenKey;
         string _refreshTokenKey;
