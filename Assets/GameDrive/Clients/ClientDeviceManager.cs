@@ -40,14 +40,10 @@ namespace GameDrive
         {
             string deviceName = GetDeviceName();
 
-            string deviceId;
-            if (SystemInfo.unsupportedIdentifier != SystemInfo.deviceUniqueIdentifier)
+            string deviceId = SystemInfo.deviceUniqueIdentifier;
+
+            if (string.IsNullOrEmpty(deviceId) || deviceId == SystemInfo.unsupportedIdentifier)
             {
-                deviceId = SystemInfo.deviceUniqueIdentifier;
-            }
-            else
-            {
-                //Genereate new device id
                 deviceId = GUIDManager.Instance().GetGUID(_clientId);
             }
 
@@ -80,7 +76,7 @@ namespace GameDrive
             {
                 deviceName = "Undefined Name";
             }
-            deviceName += suffix;
+            deviceName += "_" + suffix;
             return deviceName;
         }
     }

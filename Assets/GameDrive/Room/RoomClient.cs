@@ -27,6 +27,7 @@ namespace GameDrive.Room
         private ColyseusRoom<T> _colyseusRoom;
 
         public ColyseusRoom<T> ColyseusRoom => _colyseusRoom;
+        public RoomSession LatestRoomSession { get; private set; }
 
         public RoomClient(string roomName, Client client_ = null)
         {
@@ -48,17 +49,41 @@ namespace GameDrive.Room
             return colyseusSettings;
         }
 
-        private async Task RunColyseusRoomTask(Task<ColyseusRoom<T>> task, Action<ErrorSimple> onError, Action<ColyseusRoom<T>> onJoin)
+        private async Task RunColyseusRoomTask(Task<ColyseusRoom<T>> task, Action<ErrorSimple> onError, Action<ColyseusRoom<T>> onJoin, string roomServiceAddress)
         {
             try
             {
                 var result = await task;
                 _colyseusRoom = result;
+                LatestRoomSession = new RoomSession();
+                LatestRoomSession.sessionId = _colyseusRoom.SessionId;
+                LatestRoomSession.roomId = _colyseusRoom.Id;
+                LatestRoomSession.roomServiceAddress = roomServiceAddress;
                 onJoin.Invoke(result);
             }
             catch (System.Exception exception)
             {
+                LatestRoomSession = null;
                 onError.Invoke(CreateErrorSimple(exception));
+            }
+        }
+
+        private async Task RunTask(Task task, Action<ErrorSimple> onError, Action onSuccess)
+        {
+            bool runTaskPassed = false;
+            try
+            {
+                await task;
+                runTaskPassed = true;
+            }
+            catch (System.Exception exception)
+            {
+                onError.Invoke(CreateErrorSimple(exception));
+            }
+
+            if (runTaskPassed)
+            {
+                onSuccess.Invoke();
             }
         }
 
@@ -76,7 +101,7 @@ namespace GameDrive.Room
 
                      Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.Create<T>(roomServiceRoomName, toSendOptions);
 
-                     var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin);
+                     var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, joinOrCreateResult.createRoomResult.roomServiceAddress);
                      task.ContinueWith(t =>
                      {
                          onError.Invoke(CreateErrorSimple(t.Exception));
@@ -105,7 +130,7 @@ namespace GameDrive.Room
 
                      Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.ConsumeSeatReservation<T>(colyseusMatchMakeResponse);
 
-                     var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin);
+                     var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, joinOrCreateResult.joinReservation.roomAddress.roomServiceAddress);
                      task.ContinueWith(t =>
                      {
                          onError.Invoke(CreateErrorSimple(t.Exception));
@@ -132,7 +157,7 @@ namespace GameDrive.Room
                     var toSendOptions = CreateToSendOptions(options);
                     Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.Create<T>(roomServiceRoomName, toSendOptions);
 
-                    var task = RunColyseusRoomTask(taskJoinRoom, onError, onCreated);
+                    var task = RunColyseusRoomTask(taskJoinRoom, onError, onCreated, roomAddress.roomServiceAddress);
                     task.ContinueWith(t =>
                     {
                         onError.Invoke(CreateErrorSimple(t.Exception));
@@ -174,7 +199,7 @@ namespace GameDrive.Room
 
                     Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.ConsumeSeatReservation<T>(colyseusMatchMakeResponse);
 
-                    var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin);
+                    var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, joinRoomReserve.roomAddress.roomServiceAddress);
                     task.ContinueWith(t =>
                     {
                         onError.Invoke(CreateErrorSimple(t.Exception));
@@ -194,7 +219,7 @@ namespace GameDrive.Room
             var toSendOptions = CreateToSendOptions(options);
             Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.JoinById<T>(roomId, toSendOptions);
 
-            var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin);
+            var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, roomServiceAddress);
             task.ContinueWith(t =>
             {
                 onError.Invoke(CreateErrorSimple(t.Exception));
@@ -205,6 +230,7 @@ namespace GameDrive.Room
         {
             _roomService.GetPlayerCurrentRoom(result =>
             {
+                LatestRoomSession = result;
                 onData(result);
             }, (err) =>
             {
@@ -236,7 +262,12 @@ namespace GameDrive.Room
 
         public void Leave(Action onLeavedRoomCalled, Action<ErrorSimple> onError)
         {
-            Task task = RunTask(ColyseusRoom.Leave(true), onError, onLeavedRoomCalled);
+            Task task = RunTask(ColyseusRoom.Leave(true), onError, () =>
+            {
+                LatestRoomSession = null;
+                _colyseusRoom = null;
+                onLeavedRoomCalled.Invoke();
+            });
 
             task.ContinueWith(t =>
             {
@@ -251,30 +282,12 @@ namespace GameDrive.Room
 
             Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.Reconnect<T>(roomSession.roomId, roomSession.sessionId);
 
-            var task = RunColyseusRoomTask(taskJoinRoom, onError, onReconnected);
+            var task = RunColyseusRoomTask(taskJoinRoom, onError, onReconnected, roomSession.roomServiceAddress);
+
             task.ContinueWith(t =>
             {
                 onError.Invoke(CreateErrorSimple(t.Exception));
             }, TaskContinuationOptions.OnlyOnFaulted);
-        }
-
-        private async Task RunTask(Task task, Action<ErrorSimple> onError, Action onSuccess)
-        {
-            bool runTaskPassed = false;
-            try
-            {
-                await task;
-                runTaskPassed = true;
-            }
-            catch (System.Exception exception)
-            {
-                onError.Invoke(CreateErrorSimple(exception));
-            }
-
-            if (runTaskPassed)
-            {
-                onSuccess.Invoke();
-            }
         }
 
         private ErrorSimple CreateErrorSimple(System.Exception exception)

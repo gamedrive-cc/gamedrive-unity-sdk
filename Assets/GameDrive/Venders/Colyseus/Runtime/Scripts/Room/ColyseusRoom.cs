@@ -161,7 +161,18 @@ namespace Colyseus
                 }
                 else
                 {
-                    await colyseusConnection.Close();
+                    try
+                    {
+                        await colyseusConnection.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning(ex);
+                        if (ex.Message == "Aborted")
+                        {
+                            OnLeave?.Invoke((int)WebSocketCloseCode.Abnormal);
+                        }
+                    }
                 }
             }
             else
