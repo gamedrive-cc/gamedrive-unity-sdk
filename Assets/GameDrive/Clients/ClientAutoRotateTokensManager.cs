@@ -36,9 +36,12 @@ namespace GameDrive
             _checkInSeconds = expiresInSeconds - offsetBeforeExpires;
             if (_checkInSeconds <= 0)
             {
-                Debug.LogError("SetAutoRotateInNextSeconds _checkInSeconds <= 0:" + _checkInSeconds);
+                Debug.LogWarning("SetAutoRotateInNextSeconds _checkInSeconds <= 0, it's " + _checkInSeconds + " seconds");
                 return;
             }
+            
+            Debug.Log("GameDrive will auto rotate tokens in " + _checkInSeconds + " seconds");
+
             DateTime now = DateTime.Now;
             SetToRotateDateTime(now.AddSeconds(_checkInSeconds));
             CoroutineHelper.Instance.RestartCoroutine(ref _rotateTokenCoroutine, CheckAndRotateTokenCoroutine(_checkInSeconds + 1));
