@@ -6,7 +6,7 @@ namespace GameDrive.Room
     public class RoomSession
     {
         public string roomId;
-        public string sessionId;
+        public string reconnectionToken;
         public string roomServiceAddress;
     }
 }

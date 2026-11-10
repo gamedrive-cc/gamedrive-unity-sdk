@@ -20,6 +20,10 @@ namespace GameDriveSample
         void Awake()
         {
             Instance = this;
+        }
+
+        private void Start()
+        {
             SetClient(_drodownClients.value);
         }
 

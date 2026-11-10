@@ -1,0 +1,9 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="ColyseusSDK.csproj" />
+  <Project Path="GameDrive.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Colyseus.Editor.csproj" />
+  <Project Path="colyseus.nativewebsocket.csproj" />
+  <Project Path="GameDrive.Editor.csproj" />
+</Solution>

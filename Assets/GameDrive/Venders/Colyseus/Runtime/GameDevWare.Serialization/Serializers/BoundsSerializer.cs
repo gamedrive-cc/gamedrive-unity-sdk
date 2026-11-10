@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -13,17 +13,22 @@
 	to use it in your project you should accept Terms of Service and EULA 
 	https://unity3d.com/ru/legal/as_terms
 */
-#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5
+#if UNITY_5 || UNITY_4 || UNITY_3_3 || UNITY_3_4 || UNITY_3_5 || UNITY_5_3_OR_NEWER
 using System;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization.Serializers
 {
+	/// <summary>
+	/// Serializer for <see cref="UnityEngine.Bounds"/>.
+	/// </summary>
 	public sealed class BoundsSerializer : TypeSerializer
 	{
+		/// <inheritdoc />
 		public override Type SerializedType { get { return typeof(Bounds); } }
 
+		/// <inheritdoc />
 		public override object Deserialize(IJsonReader reader)
 		{
 			if (reader == null) throw new ArgumentNullException("reader");
@@ -46,6 +51,8 @@ namespace GameDevWare.Serialization.Serializers
 			reader.ReadObjectEnd(nextToken: false);
 			return value;
 		}
+
+		/// <inheritdoc />
 		public override void Serialize(IJsonWriter writer, object value)
 		{
 			if (writer == null) throw new ArgumentNullException("writer");

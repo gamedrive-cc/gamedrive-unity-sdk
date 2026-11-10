@@ -44,7 +44,7 @@ namespace GameDriveSample
             {
                 if (client.RoomClient.ColyseusRoom == null)
                 {
-                    if (client.RoomClient.LatestRoomSession != null)
+                    if (client.LatestRoomSession != null)
                     {
                         SetCurrentStus(ClientRoomState.Disconnected);
                     }
@@ -56,11 +56,11 @@ namespace GameDriveSample
                 else
                 {
 
-                    if (client.RoomClient.ColyseusRoom.colyseusConnection.IsOpen)
+                    if (client.RoomClient.ColyseusRoom.Connection.IsOpen)
                     {
                         if (client.IsDisconnected)
                         {
-                            if (client.RoomClient.LatestRoomSession != null)
+                            if (client.LatestRoomSession != null)
                             {
                                 SetCurrentStus(ClientRoomState.Disconnected);
                             }
@@ -76,7 +76,7 @@ namespace GameDriveSample
                     }
                     else
                     {
-                        if (client.RoomClient.LatestRoomSession != null)
+                        if (client.LatestRoomSession != null)
                         {
                             SetCurrentStus(ClientRoomState.Disconnected);
                         }

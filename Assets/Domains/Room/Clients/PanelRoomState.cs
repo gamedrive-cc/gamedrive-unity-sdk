@@ -1,3 +1,4 @@
+
 using Colyseus;
 using UnityEngine;
 
@@ -15,28 +16,43 @@ namespace GameDriveSample
 
         [SerializeField] ClientRoomStateManager _clientRoomStateManager;
 
-        private ColyseusRoom<MainState> _colyseusRoom;
+        [SerializeField]
+        private TMPro.TextMeshProUGUI _textRoomId;
+        private Colyseus.Room<MainState> _colyseusRoom;
 
         private void Start()
         {
             _clientRoomStateManager.ActionStateChanged += UpdateClientColyseusRoom;
         }
 
+        private void OnDestroy()
+        {
+            _clientRoomStateManager.ActionStateChanged -= UpdateClientColyseusRoom;
+
+            if (_colyseusRoom != null)
+            {
+                _colyseusRoom.OnStateChange -= OnMainState_OnChange;
+            }
+        }
+
 
         ClientsHolder _currentClientsHolder;
         private void UpdateClientColyseusRoom()
         {
-            if (_clientRoomStateManager.CurrentState == ClientRoomState.Disconnected)
-            {
-                _textTimerValue.text = "";
-                _text.text = "";
-            }
+            _text.text = "";
+            _textTimerValue.text = "";
+            _textRoomId.text = "";
 
             _currentClientsHolder = _panelClient.ClientsHolder;
-            ListentoMessage(_currentClientsHolder.RoomClient.ColyseusRoom);
+            ListentoMessage(_currentClientsHolder?.RoomClient?.ColyseusRoom);
+            UpdateRoomIdText();
         }
 
-        private void ListentoMessage(ColyseusRoom<MainState> colyseusRoom)
+        private void UpdateRoomIdText() { 
+            _textRoomId.text = _currentClientsHolder?.RoomClient?.ColyseusRoom?.RoomId ?? "";
+        }
+
+        private void ListentoMessage(Colyseus.Room<MainState> colyseusRoom)
         {
             //if the old message not null, unlisten
             if (_colyseusRoom == colyseusRoom)
@@ -46,69 +62,25 @@ namespace GameDriveSample
 
             if (_colyseusRoom != null)
             {
-                for (int i = 0; i < MessageTypes.Types.Length; i++)
-                {
-                    var messageType = MessageTypes.Types[i];
-                    _colyseusRoom.State.OnChange -= OnMainState_OnChange;
-                    _colyseusRoom.State.players.OnChange -= Players_OnChange;
-                    _colyseusRoom.State.players.OnAdd -= Players_OnAdd;
-
-                    _colyseusRoom.State.itemMap.OnChange -= ItemMap_OnChange;
-                }
-
+                _colyseusRoom.OnStateChange -= OnMainState_OnChange;
             }
 
             _colyseusRoom = colyseusRoom;
 
             if (_colyseusRoom != null)
             {
-                for (int i = 0; i < MessageTypes.Types.Length; i++)
-                {
-                    var messageType = MessageTypes.Types[i];
-                    _colyseusRoom.State.OnChange += OnMainState_OnChange;
-                    _colyseusRoom.State.players.OnChange += Players_OnChange;
-                    _colyseusRoom.State.players.OnAdd += Players_OnAdd;
-                    _colyseusRoom.State.players.OnRemove += Players_OnRemove;
-
-                    _colyseusRoom.State.itemMap.OnChange += ItemMap_OnChange;
-                    _colyseusRoom.State.itemMap.OnAdd += ItemMap_OnAdd;
-                    _colyseusRoom.State.itemMap.OnRemove += ItemMap_OnRemove;
-                }
-
-                UpdateRenderStateObject();
+                _colyseusRoom.OnStateChange += OnMainState_OnChange;
             }
-            else
-            {
-                UpdateRenderStateObject();
-            }
-        }
 
-        private void ItemMap_OnRemove(string key, Item value)
-        {
+            UpdateTimer();
             UpdateRenderStateObject();
         }
 
-        private void ItemMap_OnAdd(string key, Item value)
-        {
-            UpdateRenderStateObject();
-            value.OnChange += OnItemChanged;
-        }
-
-        private void Players_OnAdd(int key, Player value)
-        {
-            UpdateRenderStateObject();
-            value.OnChange += OnPlayerChanged;
-        }
-
-        private void Players_OnRemove(int key, Player value)
-        {
-            UpdateRenderStateObject();
-        }
-
-        private void OnMainState_OnChange(System.Collections.Generic.List<Colyseus.Schema.DataChange> changes)
+        private void OnMainState_OnChange(MainState state, bool isFirstState)
         {
             //update 
             UpdateTimer();
+            UpdateRenderStateObject();
         }
 
         private void UpdateTimer()
@@ -118,28 +90,7 @@ namespace GameDriveSample
             {
                 return;
             }
-            _textTimerValue.text = _colyseusRoom.State.timer.ToString();
-        }
-
-
-        private void ItemMap_OnChange(string key, Item value)
-        {
-            UpdateRenderStateObject();
-        }
-
-        private void Players_OnChange(int key, Player value)
-        {
-            UpdateRenderStateObject();
-        }
-
-        private void OnItemChanged(System.Collections.Generic.List<Colyseus.Schema.DataChange> changes)
-        {
-            UpdateRenderStateObject();
-        }
-
-        private void OnPlayerChanged(System.Collections.Generic.List<Colyseus.Schema.DataChange> changes)
-        {
-            UpdateRenderStateObject();
+            _textTimerValue.text = _colyseusRoom.State.timer.ToString("G4");
         }
 
         private void UpdateRenderStateObject()

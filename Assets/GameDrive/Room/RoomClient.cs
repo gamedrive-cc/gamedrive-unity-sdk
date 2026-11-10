@@ -9,9 +9,9 @@ namespace GameDrive.Room
 {
     public class RoomClient<T> : IRoomClient<T> where T : Schema
     {
-        ColyseusClient colyseusClient;
+        Colyseus.Client colyseusClient;
 
-        public ColyseusClient GetColyseusClient()
+        public Colyseus.Client GetColyseusClient()
         {
             return colyseusClient;
         }
@@ -22,12 +22,12 @@ namespace GameDrive.Room
 
         string _roomName;
         public Client Client { get; private set; }
-        public string RoomServiceAddress { get; private set; }
 
-        private ColyseusRoom<T> _colyseusRoom;
+        private Colyseus.Room<T> _colyseusRoom;
 
-        public ColyseusRoom<T> ColyseusRoom => _colyseusRoom;
-        public RoomSession LatestRoomSession { get; private set; }
+        private string _roomServiceAddress;
+
+        public Colyseus.Room<T> ColyseusRoom => _colyseusRoom;
 
         public RoomClient(string roomName, Client client_ = null)
         {
@@ -36,34 +36,26 @@ namespace GameDrive.Room
             _roomService = new RoomService(_roomName, Client);
         }
 
-        private ColyseusSettings CreateColyseusSettings(string roomServiceAddress)
+        private Colyseus.Settings CreateColyseusSettings(string roomServiceAddress)
         {
-            RoomServiceAddress = roomServiceAddress;
-
-            ColyseusSettings colyseusSettings = ScriptableObject.CreateInstance<ColyseusSettings>();
-            colyseusSettings.colyseusServerAddress = GameDriveInitializer.Settings.apiInfo.serverAddress;
-            colyseusSettings.colyseusSubPath = "/" + roomServiceAddress;
+            Colyseus.Settings colyseusSettings = ScriptableObject.CreateInstance<Colyseus.Settings>();
+            colyseusSettings.colyseusServerAddress = GameDriveInitializer.Settings.apiInfo.serverAddress + "/" + roomServiceAddress;
             colyseusSettings.colyseusServerPort = ProtocalManager.GetPort();
             colyseusSettings.useSecureProtocol = ProtocalManager.GetUseSecure();
-
             return colyseusSettings;
         }
 
-        private async Task RunColyseusRoomTask(Task<ColyseusRoom<T>> task, Action<ErrorSimple> onError, Action<ColyseusRoom<T>> onJoin, string roomServiceAddress)
+        private async Task RunColyseusRoomTask(Task<Colyseus.Room<T>> task, Action<ErrorSimple> onError, Action<Colyseus.Room<T>> onJoin, string roomServiceAddress)
         {
             try
             {
                 var result = await task;
                 _colyseusRoom = result;
-                LatestRoomSession = new RoomSession();
-                LatestRoomSession.sessionId = _colyseusRoom.SessionId;
-                LatestRoomSession.roomId = _colyseusRoom.Id;
-                LatestRoomSession.roomServiceAddress = roomServiceAddress;
+                _roomServiceAddress = roomServiceAddress;
                 onJoin.Invoke(result);
             }
             catch (System.Exception exception)
             {
-                LatestRoomSession = null;
                 onError.Invoke(CreateErrorSimple(exception));
             }
         }
@@ -86,8 +78,20 @@ namespace GameDrive.Room
                 onSuccess.Invoke();
             }
         }
+        private  SeatReservation CreateSeatReservation(JoinRoomReservation joinReservation)
+        {
+            return new SeatReservation
+            {
+                name = joinReservation.roomReservation.name,
+                roomId = joinReservation.roomReservation.roomId,
+                processId = joinReservation.roomReservation.processId,
+                reconnectionToken = joinReservation.roomReservation.reconnectionToken,
+                sessionId = joinReservation.roomReservation.sessionId,
 
-        public void JoinOrCreate(Dictionary<string, object> options, Action<ColyseusRoom<T>> onJoin, Action<ErrorSimple> onError)
+            };
+        }
+
+        public void JoinOrCreate(Dictionary<string, object> options, Action<Colyseus.Room<T>> onJoin, Action<ErrorSimple> onError)
         {
             var toSendOptions = CreateToSendOptions(options);
             _roomService.RequestJoinOrCreateRoom(toSendOptions, (joinOrCreateResult) =>
@@ -95,11 +99,11 @@ namespace GameDrive.Room
 
                  if (joinOrCreateResult.isCreate)
                  {
-                     colyseusClient = new ColyseusClient(CreateColyseusSettings(joinOrCreateResult.createRoomResult.roomServiceAddress), true);
+                     colyseusClient = new Colyseus.Client(CreateColyseusSettings(joinOrCreateResult.createRoomResult.roomServiceAddress));
 
                      string roomServiceRoomName = joinOrCreateResult.createRoomResult.roomName;
 
-                     Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.Create<T>(roomServiceRoomName, toSendOptions);
+                     Task<Colyseus.Room<T>> taskJoinRoom = colyseusClient.Create<T>(roomServiceRoomName, toSendOptions);
 
                      var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, joinOrCreateResult.createRoomResult.roomServiceAddress);
                      task.ContinueWith(t =>
@@ -109,26 +113,11 @@ namespace GameDrive.Room
                  }
                  else
                  {
-                     colyseusClient = new ColyseusClient(CreateColyseusSettings(joinOrCreateResult.joinReservation.roomAddress.roomServiceAddress), true);
+                     colyseusClient = new Colyseus.Client(CreateColyseusSettings(joinOrCreateResult.joinReservation.roomAddress.roomServiceAddress));
 
-                     var joinReservation = joinOrCreateResult.joinReservation;
-
-                     //TODO consume reservation
-                     ColyseusMatchMakeResponse colyseusMatchMakeResponse = new ColyseusMatchMakeResponse();
-                     colyseusMatchMakeResponse.sessionId = joinReservation.roomReservation.sessionId;
-                     colyseusMatchMakeResponse.room = new ColyseusRoomAvailable();
-                     colyseusMatchMakeResponse.room.clients = (uint)joinReservation.roomReservation.roomInfo.clients;
-                     colyseusMatchMakeResponse.room.maxClients = (uint)joinReservation.roomReservation.roomInfo.maxClients;
-                     if (joinReservation.roomReservation.roomInfo.maxClients < 0)// -1 mean Infinity in client side
-                     {
-                         colyseusMatchMakeResponse.room.maxClients = uint.MaxValue;
-                     }
-
-                     colyseusMatchMakeResponse.room.name = joinReservation.roomReservation.roomInfo.name;
-                     colyseusMatchMakeResponse.room.processId = joinReservation.roomReservation.roomInfo.processId;
-                     colyseusMatchMakeResponse.room.roomId = joinReservation.roomReservation.roomInfo.roomId;
-
-                     Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.ConsumeSeatReservation<T>(colyseusMatchMakeResponse);
+                     JoinRoomReservation joinReservation = joinOrCreateResult.joinReservation;
+                     SeatReservation seat = CreateSeatReservation(joinReservation);
+                     Task<Colyseus.Room<T>> taskJoinRoom = colyseusClient.ConsumeSeatReservation<T>(seat);
 
                      var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, joinOrCreateResult.joinReservation.roomAddress.roomServiceAddress);
                      task.ContinueWith(t =>
@@ -144,18 +133,18 @@ namespace GameDrive.Room
              );
         }
 
-        public void Create(Dictionary<string, object> options, Action<ColyseusRoom<T>> onCreated, Action<ErrorSimple> onError)
+        public void Create(Dictionary<string, object> options, Action<Colyseus.Room<T>> onCreated, Action<ErrorSimple> onError)
         {
             _roomService.RequestCreateRoom((roomAddress) =>
             {
                 if (roomAddress != null)
                 {
-                    colyseusClient = new ColyseusClient(CreateColyseusSettings(roomAddress.roomServiceAddress), true);
+                    colyseusClient = new Colyseus.Client(CreateColyseusSettings(roomAddress.roomServiceAddress));
 
                     string roomServiceRoomName = roomAddress.roomName;
 
                     var toSendOptions = CreateToSendOptions(options);
-                    Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.Create<T>(roomServiceRoomName, toSendOptions);
+                    Task<Colyseus.Room<T>> taskJoinRoom = colyseusClient.Create<T>(roomServiceRoomName, toSendOptions);
 
                     var task = RunColyseusRoomTask(taskJoinRoom, onError, onCreated, roomAddress.roomServiceAddress);
                     task.ContinueWith(t =>
@@ -175,7 +164,7 @@ namespace GameDrive.Room
             });
         }
 
-        public void Join(Dictionary<string, object> options, Action<ColyseusRoom<T>> onJoin, Action<ErrorSimple> onError)
+        public void Join(Dictionary<string, object> options, Action<Colyseus.Room<T>> onJoin, Action<ErrorSimple> onError)
         {
             //find roomServiceRoomName by send request to server player gateway
             var toSendOptions = CreateToSendOptions(options);
@@ -188,16 +177,9 @@ namespace GameDrive.Room
                 else
                 {
                     //join room
-                    colyseusClient = new ColyseusClient(CreateColyseusSettings(joinRoomReserve.roomAddress.roomServiceAddress), true);
-
-                    ColyseusMatchMakeResponse colyseusMatchMakeResponse = new ColyseusMatchMakeResponse();
-                    colyseusMatchMakeResponse.sessionId = joinRoomReserve.roomReservation.sessionId;
-                    colyseusMatchMakeResponse.room = new ColyseusRoomAvailable();
-                    colyseusMatchMakeResponse.room.name = joinRoomReserve.roomReservation.roomInfo.name;
-                    colyseusMatchMakeResponse.room.roomId = joinRoomReserve.roomReservation.roomInfo.roomId;
-                    colyseusMatchMakeResponse.room.processId = joinRoomReserve.roomReservation.roomInfo.processId;
-
-                    Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.ConsumeSeatReservation<T>(colyseusMatchMakeResponse);
+                    colyseusClient = new Colyseus.Client(CreateColyseusSettings(joinRoomReserve.roomAddress.roomServiceAddress));
+                    SeatReservation seat = CreateSeatReservation(joinRoomReserve);
+                    Task<Colyseus.Room<T>> taskJoinRoom = colyseusClient.ConsumeSeatReservation<T>(seat);
 
                     var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, joinRoomReserve.roomAddress.roomServiceAddress);
                     task.ContinueWith(t =>
@@ -211,13 +193,13 @@ namespace GameDrive.Room
             });
         }
 
-        public void JoinById(string roomId, string roomServiceAddress, Dictionary<string, object> options, Action<ColyseusRoom<T>> onJoin, Action<ErrorSimple> onError)
+        public void JoinById(string roomId, string roomServiceAddress, Dictionary<string, object> options, Action<Colyseus.Room<T>> onJoin, Action<ErrorSimple> onError)
         {
             //find roomServiceRoomName by send request to server roomName
-            colyseusClient = new ColyseusClient(CreateColyseusSettings(roomServiceAddress), true);
+            colyseusClient = new Colyseus.Client(CreateColyseusSettings(roomServiceAddress));
 
             var toSendOptions = CreateToSendOptions(options);
-            Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.JoinById<T>(roomId, toSendOptions);
+            Task<Colyseus.Room<T>> taskJoinRoom = colyseusClient.JoinById<T>(roomId, toSendOptions);
 
             var task = RunColyseusRoomTask(taskJoinRoom, onError, onJoin, roomServiceAddress);
             task.ContinueWith(t =>
@@ -230,7 +212,6 @@ namespace GameDrive.Room
         {
             _roomService.GetPlayerCurrentRoom(result =>
             {
-                LatestRoomSession = result;
                 onData(result);
             }, (err) =>
             {
@@ -250,37 +231,70 @@ namespace GameDrive.Room
             });
         }
 
-        public void Disconnect(Action onLeavedRoomCalled, Action<ErrorSimple> onError)
+        public async Task DisconnectAsync(Action onSuccess, Action<ErrorSimple> onError)
         {
-            Task task = RunTask(ColyseusRoom.Leave(false), onError, onLeavedRoomCalled);
-
-            task.ContinueWith(t =>
+            var room = ColyseusRoom;
+            if (room == null)
             {
-                onError.Invoke(CreateErrorSimple(t.Exception));
-            }, TaskContinuationOptions.OnlyOnFaulted);
+                onSuccess?.Invoke();
+                return;
+            }
+
+            // An intentional disconnect keeps the seat for a manual Reconnect;
+            // without this, an abnormal close (1006) triggers Colyseus auto-reconnect.
+            room.Reconnection.Enabled = false;
+
+            try
+            {
+                await room.Leave(false);
+            }
+            catch (System.Net.WebSockets.WebSocketException)
+            {
+                // Proxies in front of remote servers often drop the TCP connection instead of
+                // echoing the close frame; the socket is closed (aborted) either way.
+            }
+            catch (System.Exception ex)
+            {
+                onError?.Invoke(CreateErrorSimple(ex));
+                return;
+            }
+
+            onSuccess?.Invoke();
         }
 
-        public void Leave(Action onLeavedRoomCalled, Action<ErrorSimple> onError)
+        public void Disconnect(Action onSuccess, Action<ErrorSimple> onError)
         {
-            Task task = RunTask(ColyseusRoom.Leave(true), onError, () =>
-            {
-                LatestRoomSession = null;
-                _colyseusRoom = null;
-                onLeavedRoomCalled.Invoke();
-            });
-
-            task.ContinueWith(t =>
-            {
-                onError.Invoke(CreateErrorSimple(t.Exception));
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            _ = DisconnectAsync(onSuccess, onError);
         }
 
-        public void Reconnect(RoomSession roomSession, Action<ColyseusRoom<T>> onReconnected, Action<ErrorSimple> onError)
+        public async Task LeaveAsync(Action onSuccess, Action<ErrorSimple> onError)
         {
-            colyseusClient = new ColyseusClient(CreateColyseusSettings(roomSession.roomServiceAddress), true);
+            try
+            {
+                // Attempt the leave handshake
+                await ColyseusRoom.Leave(true);
+                onSuccess?.Invoke();
+            }
+            catch (System.Exception ex)
+            {
+                onError?.Invoke(CreateErrorSimple(ex));
+            }
+        }
+
+        public void Leave(Action onSuccess, Action<ErrorSimple> onError)
+        {
+            _ = LeaveAsync(onSuccess, onError);
+        }
+
+        public void Reconnect(RoomSession roomSession, Action<Colyseus.Room<T>> onReconnected, Action<ErrorSimple> onError)
+        {
+            colyseusClient = new Colyseus.Client(CreateColyseusSettings(roomSession.roomServiceAddress));
             //colyseusClient.rec
 
-            Task<ColyseusRoom<T>> taskJoinRoom = colyseusClient.Reconnect<T>(roomSession.roomId, roomSession.sessionId);
+            Task<Colyseus.Room<T>> taskJoinRoom = colyseusClient.Reconnect<T>(new ReconnectionToken {
+                RoomId = roomSession.roomId,
+                Token = roomSession.reconnectionToken
+            });
 
             var task = RunColyseusRoomTask(taskJoinRoom, onError, onReconnected, roomSession.roomServiceAddress);
 
@@ -288,6 +302,21 @@ namespace GameDrive.Room
             {
                 onError.Invoke(CreateErrorSimple(t.Exception));
             }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        public RoomSession CreateRoomSession()
+        {
+            if (_colyseusRoom == null)
+            {
+                return null;
+            }
+
+            return new RoomSession
+            {
+                roomId = _colyseusRoom.RoomId,
+                roomServiceAddress = _roomServiceAddress,
+                reconnectionToken = _colyseusRoom.ReconnectionToken.Token
+            };
         }
 
         private ErrorSimple CreateErrorSimple(System.Exception exception)

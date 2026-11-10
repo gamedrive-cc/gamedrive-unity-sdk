@@ -35,17 +35,25 @@ namespace GameDrive
             HttpPutRequest.Instance().RequestJson(_client, path,
                 bytes, (result) =>
                 {
+                    T data;
                     try
                     {
-                        T data = JsonConvert.DeserializeObject<T>(result);
-                        callback(data);
+                        data = JsonConvert.DeserializeObject<T>(result);
                     }
                     catch (System.Exception exception)
                     {
-                        ErrorSimple error = new ErrorSimple(TEXT_ENDPOINT_DESERIALIZE_ERROR, exception.ToString());
-                        callbackError(error);
+                        ErrorSimple error = new ErrorSimple(
+                            TEXT_ENDPOINT_DESERIALIZE_ERROR,
+                            exception.ToString() + ", message:" + result
+                        );
+
+                        callbackError?.Invoke(error);
+                        return;
                     }
-                }, callbackError);
+
+                    callback?.Invoke(data);
+                }, 
+                callbackError);
         }
 
         dynamic[] _args;

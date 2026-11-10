@@ -1,3 +1,4 @@
+
 using Colyseus;
 using System;
 using System.Collections.Generic;
@@ -48,8 +49,10 @@ namespace GameDriveSample
 
         [SerializeField] PanelClient _panelClient;
 
-        private ColyseusRoom<MainState> _colyseusRoom;
+        private Colyseus.Room<MainState> _colyseusRoom;
         [SerializeField] ClientRoomStateManager _clientRoomStateManager;
+
+        List<Action> _unregisterOnMessages = new List<Action>();
 
 
         private void Start()
@@ -57,6 +60,17 @@ namespace GameDriveSample
             UpdateRenderMessage();
             _currentClientsHolder = _panelClient.ClientsHolder;
             _clientRoomStateManager.ActionStateChanged += OnColyseusRoomChanged;
+        }
+
+        private void OnDestroy()
+        {
+            _clientRoomStateManager.ActionStateChanged -= OnColyseusRoomChanged;
+
+            foreach (var unregister in _unregisterOnMessages)
+            {
+                unregister?.Invoke();
+            }
+            _unregisterOnMessages.Clear();
         }
 
 
@@ -70,7 +84,7 @@ namespace GameDriveSample
             ListentoMessage(_currentClientsHolder.RoomClient.ColyseusRoom);
         }
 
-        private void ListentoMessage(ColyseusRoom<MainState> colyseusRoom)
+        private void ListentoMessage(Colyseus.Room<MainState> colyseusRoom)
         {
             //if the old message not null, unlisten
             if (_colyseusRoom == colyseusRoom)
@@ -81,12 +95,11 @@ namespace GameDriveSample
 
             if (_colyseusRoom != null)
             {
-                for (int i = 0; i < MessageTypes.Types.Length; i++)
+                foreach (var unregister in _unregisterOnMessages)
                 {
-                    var messageType = MessageTypes.Types[i];
-                    _colyseusRoom.RemoveOnMessage<string>(messageType);
+                    unregister?.Invoke();
                 }
-
+                _unregisterOnMessages.Clear();
             }
 
             _colyseusRoom = colyseusRoom;
@@ -96,12 +109,14 @@ namespace GameDriveSample
                 for (int i = 0; i < MessageTypes.Types.Length; i++)
                 {
                     var messageType = MessageTypes.Types[i];
-                    _colyseusRoom.OnMessage<MessageObject>(messageType, (MessageObject message) =>
+                    Action unregister = _colyseusRoom.OnMessage<MessageObject>(messageType, (MessageObject message) =>
                     {
                         //
                         messages.Add(new Message(messageType, message.ToString()));
                         UpdateRenderMessage();
                     });
+
+                    _unregisterOnMessages.Add(unregister);
                 }
 
             }
