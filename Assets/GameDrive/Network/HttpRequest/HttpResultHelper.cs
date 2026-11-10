@@ -18,7 +18,7 @@ namespace GameDrive.Network
                 string text = webRequest.downloadHandler.text;
                 if (webRequest.responseCode >= 400)
                 {
-                    string errorMessage = "url:" + webRequest.uri.ToString() + ",\ntext:" + text;
+                    string errorMessage = "url:" + webRequest.uri.ToString() + ", status code:" + webRequest.responseCode + ",\ntext:" + text;
                     Debug.LogError(errorMessage);
                     ErrorSimple errorSimple;
                     try

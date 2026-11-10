@@ -25,8 +25,21 @@ namespace GameDrive
         protected void OnEnable()
         {
             LoadConfigSO();
-            gameDriveIcon = Resources.Load("GameDriveLogo", typeof(Texture2D)) as Texture2D;
 
+            var guids = AssetDatabase.FindAssets("GameDriveLogo t:Texture2D");
+
+            if (guids.Length > 0)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+
+                gameDriveIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+
+                Debug.Log($"GameDrive logo loaded from: {path}");
+            }
+            else
+            {
+                Debug.LogError("GameDriveLogo.png not found!");
+            }
         }
 
         private void LoadConfigSO()

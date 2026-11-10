@@ -1,7 +1,9 @@
 {
     "name": "GameDrive",
     "rootNamespace": "GameDrive",
-    "references": [],
+    "references": [
+        "GUID:7d8788162c0190c4c8b801543ada1607"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

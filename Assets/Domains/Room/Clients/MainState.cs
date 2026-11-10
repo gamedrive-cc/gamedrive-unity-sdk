@@ -1,55 +1,67 @@
-﻿using Colyseus.Schema;
-using System.Collections.Generic;
-
-namespace GameDriveSample
+﻿namespace GameDriveSample
 {
-    public partial class Item : Schema
+    public partial class Item : global::Colyseus.Schema.Schema
     {
-        [Type(0, "string")]
+#if UNITY_5_3_OR_NEWER
+        [global::UnityEngine.Scripting.Preserve]
+#endif
+        public Item() { }
+
+        [global::Colyseus.Schema.Type(0, "string")]
         public string name = default(string);
 
-        [Type(1, "uint8")]
+        [global::Colyseus.Schema.Type(1, "uint8")]
         public byte level = default(byte);
 
         public override string ToString()
         {
-            return $"Item(name={name}, level={level})";
+            return $"Item( name={name}, level={level})";
         }
     }
 
-    public partial class Player : Schema
+    public partial class Player : global::Colyseus.Schema.Schema
     {
-        [Type(0, "string")]
+#if UNITY_5_3_OR_NEWER
+        [global::UnityEngine.Scripting.Preserve]
+#endif
+        public Player() { }
+
+        [global::Colyseus.Schema.Type(0, "string")]
         public string id = default(string);
 
-        [Type(1, "string")]
+        [global::Colyseus.Schema.Type(1, "string")]
         public string name = default(string);
 
-        [Type(2, "int8")]
+        [global::Colyseus.Schema.Type(2, "int8")]
         public sbyte positionX = default(sbyte);
 
-        [Type(3, "int8")]
+        [global::Colyseus.Schema.Type(3, "int8")]
         public sbyte positionY = default(sbyte);
 
-        [Type(4, "boolean")]
-        public bool connected = default(bool);
+        [global::Colyseus.Schema.Type(4, "boolean")]
+        public bool connected = true;
 
         public override string ToString()
         {
-            return $"Player(id={id}, name={name}, position=({positionX},{positionY}), connected={connected})";
+            return $"Player( id={id}, name={name}, positionX={positionX}, positionY={positionY}, connected={connected})";
         }
     }
 
-    public partial class MainState : Schema
+    public partial class MainState : global::Colyseus.Schema.Schema
     {
-        [Type(0, "float32")]
-        public float timer = default(float);
+#if UNITY_5_3_OR_NEWER
+        [global::UnityEngine.Scripting.Preserve]
+#endif
+        public MainState() { }
 
-        [Type(1, "array", typeof(ArraySchema<Player>))]
-        public ArraySchema<Player> players = new ArraySchema<Player>();
+        [global::Colyseus.Schema.Type(0, "float32")]
+        public double timer = default(double);
 
-        [Type(2, "map", typeof(MapSchema<Item>))]
-        public MapSchema<Item> itemMap = new MapSchema<Item>();
+        [global::Colyseus.Schema.Type(1, "array", typeof(global::Colyseus.Schema.ArraySchema<Player>))]
+        public global::Colyseus.Schema.ArraySchema<Player> players = new global::Colyseus.Schema.ArraySchema<Player>();
+
+        [global::Colyseus.Schema.Type(2, "map", typeof(global::Colyseus.Schema.MapSchema<Item>))]
+        public global::Colyseus.Schema.MapSchema<Item> itemMap = new global::Colyseus.Schema.MapSchema<Item>();
 
         public override string ToString()
         {

@@ -1,5 +1,8 @@
+using GameDevWare.Serialization;
 using GameDrive.Room;
+using Newtonsoft.Json;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,7 +21,7 @@ namespace GameDriveSample
 
         [SerializeField] private ClientRoomStateManager _clientRoomStateManager;
         [SerializeField] private PanelClientInfo _panelClientInfo;
-
+        [SerializeField] private TMPro.TMP_InputField _inputOptions;
 
         private void OnEnable()
         {
@@ -65,6 +68,7 @@ namespace GameDriveSample
             {
                 case ClientRoomState.Disconnected:
                     _buttonReconnect.gameObject.SetActive(true);
+                    //_buttonLeave.gameObject.SetActive(true);
                     break;
                 case ClientRoomState.Connecting:
                     _buttonDisconnect.gameObject.SetActive(true);
@@ -93,16 +97,37 @@ namespace GameDriveSample
             });
         }
 
+        private Dictionary<string, object> GetOptionsFromInput() {
+            string value = _inputOptions.text;
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return new Dictionary<string, object>();
+            }
+
+            try
+            {
+                return JsonConvert.DeserializeObject<Dictionary<string, object>>(value)
+                    ?? new Dictionary<string, object>();
+            }
+            catch (JsonException ex)
+            {
+                Debug.LogError($"Invalid JSON options: {ex.Message}");
+                return new Dictionary<string, object>();
+            }
+        }
         private void OnButtonJoinOrCreateClicked()
         {
             var clients = _panelClient.ClientsHolder;
-            var options = new Dictionary<string, object>();
+            var options = GetOptionsFromInput();
             PanelLoadingController.Instance.ShowLoading(gameObject.name);
             clients.RoomClient.JoinOrCreate(options, (colyseusRoom) =>
             {
                 PanelLoadingController.Instance.HideLoading(gameObject.name);
 
+                clients.SetLatestRoomSession(clients.RoomClient.CreateRoomSession());
                 _clientRoomStateManager.TriggerFindClientState();
+                clients.SetDisconnected(true);
             }, (error) =>
             {
                 Debug.LogError(error);
@@ -114,13 +139,14 @@ namespace GameDriveSample
         private void OnButtonReconnectClicked()
         {
             var clients = _panelClient.ClientsHolder;
-            var options = new Dictionary<string, object>();
+            var options = GetOptionsFromInput();
 
             PanelLoadingController.Instance.ShowLoading(gameObject.name);
-            clients.RoomClient.Reconnect(clients.RoomClient.LatestRoomSession, (colyseusRoom) =>
+            clients.RoomClient.Reconnect(clients.LatestRoomSession, (colyseusRoom) =>
             {
                 PanelLoadingController.Instance.HideLoading(gameObject.name);
 
+                clients.SetLatestRoomSession(clients.RoomClient.CreateRoomSession());
                 clients.SetDisconnected(false);
                 _clientRoomStateManager.TriggerFindClientState();
             }, (error) =>
@@ -154,6 +180,7 @@ namespace GameDriveSample
             clients.RoomClient.Leave(() =>
             {
                 PanelLoadingController.Instance.HideLoading(gameObject.name);
+                clients.SetLatestRoomSession(null);
                 _clientRoomStateManager.TriggerFindClientState();
             }, (error) =>
             {
@@ -170,6 +197,7 @@ namespace GameDriveSample
             clients.RoomClient.GetPlayerCurrentRoom((RoomSession roomSession) =>
             {
                 PanelLoadingController.Instance.HideLoading(gameObject.name);
+                clients.SetLatestRoomSession(roomSession);
                 _clientRoomStateManager.TriggerFindClientState();
             }, (error) =>
             {

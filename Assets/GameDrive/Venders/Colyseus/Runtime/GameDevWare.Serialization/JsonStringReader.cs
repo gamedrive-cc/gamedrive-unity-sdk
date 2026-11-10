@@ -1,5 +1,5 @@
-﻿/* 
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+/* 
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -18,13 +18,22 @@ using System;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Represents a JSON reader that reads from a <see cref="string"/>.
+	/// </summary>
 	public sealed class JsonStringReader : JsonReader
 	{
 		private readonly string jsonString;
 		private int position;
 
-		public JsonStringReader(string jsonString, SerializationContext context, int bufferSize = DEFAULT_BUFFER_SIZE)
-			: base(context, bufferSize)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JsonStringReader"/> class.
+		/// </summary>
+		/// <param name="jsonString">The JSON <see cref="string"/> to read.</param>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="buffer">The character buffer to use.</param>
+		public JsonStringReader(string jsonString, SerializationContext context, char[] buffer = null)
+			: base(context, buffer)
 		{
 			if (jsonString == null)
 				throw new ArgumentNullException("jsonString");
@@ -34,6 +43,7 @@ namespace GameDevWare.Serialization
 			this.position = 0;
 		}
 
+		/// <inheritdoc />
 		protected override int FillBuffer(char[] buffer, int index)
 		{
 			if (buffer == null)
@@ -42,13 +52,13 @@ namespace GameDevWare.Serialization
 				throw new ArgumentOutOfRangeException("index");
 
 
-			var block = Math.Min(jsonString.Length - position, buffer.Length - index);
+			var block = Math.Min(this.jsonString.Length - this.position, buffer.Length - index);
 			if (block <= 0)
 				return index;
 
-			jsonString.CopyTo(position, buffer, index, block);
+			this.jsonString.CopyTo(this.position, buffer, index, block);
 
-			position += block;
+			this.position += block;
 
 			return index + block;
 		}

@@ -1,5 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 
 
@@ -10,10 +10,12 @@ namespace GameDrive
         public static CoroutineHelper Instance;
 
         public bool IsDestroyed { get; private set; }
+        public static Action OnInstanceSet { get; set; }
 
         private void Awake()
         {
             Instance = this;
+            OnInstanceSet?.Invoke();
         }
 
         public void RestartCoroutine(ref Coroutine coroutine, IEnumerator enumerator)

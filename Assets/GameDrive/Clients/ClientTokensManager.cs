@@ -42,9 +42,24 @@ namespace GameDrive
             //isPlaying only to support editor mode
             if (Application.isPlaying)
             {
-                CoroutineHelper.Instance.StartCoroutine(InitialAutoRotateRefreshTokenCoroutine());
+                StartInitialAutoRotateRefreshTokenCoroutine();
             }
 
+        }
+
+        private void StartInitialAutoRotateRefreshTokenCoroutine()
+        {
+            if (CoroutineHelper.Instance != null)
+            {
+                CoroutineHelper.Instance.StartCoroutine(InitialAutoRotateRefreshTokenCoroutine());
+            }
+            else
+            {
+                CoroutineHelper.OnInstanceSet += () =>
+                {
+                    CoroutineHelper.Instance.StartCoroutine(InitialAutoRotateRefreshTokenCoroutine());
+                };
+            }
         }
 
         IEnumerator InitialAutoRotateRefreshTokenCoroutine()

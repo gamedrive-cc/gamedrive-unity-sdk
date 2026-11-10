@@ -1,5 +1,5 @@
 /*
-	Copyright (c) 2016 Denis Zykov, GameDevWare.com
+	Copyright (c) 2026 Denis Zykov, GameDevWare.com
 
 	This a part of "Json & MessagePack Serialization" Unity Asset - https://www.assetstore.unity3d.com/#!/content/59918
 
@@ -20,17 +20,27 @@ using System.Linq;
 // ReSharper disable once CheckNamespace
 namespace GameDevWare.Serialization
 {
+	/// <summary>
+	/// Base implementation for a streaming JSON writer.
+	/// <para>This class provides the core infrastructure for generating structural JSON data, including 
+	/// automatic handling of object/array delimiters, comma separation, and value formatting. 
+	/// It operates in a forward-only, buffered manner to ensure high performance and low memory allocation.</para>
+	/// </summary>
 	public abstract class JsonWriter : IJsonWriter
 	{
+		/// <summary>
+		/// The size of the internal character buffer used for writing.
+		/// </summary>
+		public const int DEFAULT_BUFFER_SIZE = 1024;
+
 		[Flags]
 		private enum Structure : byte
 		{
-			None = 0,
 			IsContainer = 0x1,
 			IsObject = 0x2 | IsContainer,
 			IsArray = 0x4 | IsContainer,
-			IsBegining = 0x1 << 7,
-			IsBeginingOfContainer = IsContainer | IsBegining
+			IsStartOfStructure = 0x1 << 7,
+			IsStartOfContainer = IsContainer | IsStartOfStructure
 		}
 
 		private const long JS_NUMBER_MAX_VALUE_INT64 = 9007199254740992L;
@@ -51,24 +61,43 @@ namespace GameDevWare.Serialization
 		private static readonly char[] True = "true".ToCharArray();
 		private static readonly char[] False = "false".ToCharArray();
 
-		private readonly Stack<Structure> structStack = new Stack<Structure>(10);
-		private readonly char[] outputBuffer = new char[512];
+		private readonly Stack<Structure> structStack;
+		private readonly char[] buffer;
 
+		/// <inheritdoc />
 		public SerializationContext Context { get; private set; }
+		/// <summary>
+		/// Gets the number of characters written to the output.
+		/// </summary>
 		public long CharactersWritten { get; protected set; }
+		/// <summary>
+		/// Gets or sets the initial padding for pretty printing.
+		/// </summary>
 		public int InitialPadding { get; set; }
 
-		protected JsonWriter(SerializationContext context)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JsonWriter"/> class.
+		/// </summary>
+		/// <param name="context">The serialization context.</param>
+		/// <param name="buffer">The character buffer to use for writing.</param>
+		protected JsonWriter(SerializationContext context, char[] buffer = null)
 		{
 			if (context == null) throw new ArgumentNullException("context");
+			if (buffer != null && buffer.Length < 1024) throw new ArgumentOutOfRangeException("buffer", "Buffer should be at least 1024 bytes long.");
 
 			this.Context = context;
+			this.buffer = buffer ?? new char[DEFAULT_BUFFER_SIZE];
+			this.structStack = new Stack<Structure>(10);
 		}
 
+		/// <inheritdoc />
 		public abstract void Flush();
+		/// <inheritdoc />
 		public abstract void WriteJson(string jsonString);
+		/// <inheritdoc />
 		public abstract void WriteJson(char[] jsonString, int offset, int charactersToWrite);
 
+		/// <inheritdoc />
 		public void Write(string value)
 		{
 			if (value == null)
@@ -81,16 +110,18 @@ namespace GameDevWare.Serialization
 
 			var len = value.Length;
 			var offset = 0;
-			outputBuffer[0] = '"';
-			this.WriteJson(outputBuffer, 0, 1);
+			this.buffer[0] = '"';
+			this.WriteJson(this.buffer, 0, 1);
 			while (offset < len)
 			{
-				var writtenInBuffer = JsonUtils.EscapeBuffer(value, ref offset, outputBuffer, 0);
-				this.WriteJson(outputBuffer, 0, writtenInBuffer);
+				var writtenInBuffer = JsonUtils.EscapeBuffer(value, ref offset, this.buffer, 0);
+				this.WriteJson(this.buffer, 0, writtenInBuffer);
 			}
-			outputBuffer[0] = '"';
-			this.WriteJson(outputBuffer, 0, 1);
+
+			this.buffer[0] = '"';
+			this.WriteJson(this.buffer, 0, 1);
 		}
+		/// <inheritdoc />
 		public void Write(JsonMember member)
 		{
 			this.WriteFormatting(JsonToken.Member);
@@ -112,78 +143,83 @@ namespace GameDevWare.Serialization
 				this.WriteJson(NameSeparator, 0, NameSeparator.Length);
 			}
 		}
+		/// <inheritdoc />
 		public void Write(int number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.Int32ToBuffer(number, outputBuffer, 0, this.Context.Format);
-			this.WriteJson(outputBuffer, 0, len);
+			var len = JsonUtils.Int32ToBuffer(number, this.buffer, 0, this.Context.Format);
+			this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(uint number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.UInt32ToBuffer(number, outputBuffer, 0, this.Context.Format);
-			this.WriteJson(outputBuffer, 0, len);
+			var len = JsonUtils.UInt32ToBuffer(number, this.buffer, 0, this.Context.Format);
+			this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(long number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.Int64ToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.Int64ToBuffer(number, this.buffer, 0, this.Context.Format);
 
 			if (number > JS_NUMBER_MAX_VALUE_INT64)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(ulong number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.UInt64ToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.UInt64ToBuffer(number, this.buffer, 0, this.Context.Format);
 
 			if (number > JS_NUMBER_MAX_VALUE_U_INT64)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(float number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.SingleToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.SingleToBuffer(number, this.buffer, 0, this.Context.Format);
 			if (number > JS_NUMBER_MAX_VALUE_SINGLE)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(double number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.DoubleToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.DoubleToBuffer(number, this.buffer, 0, this.Context.Format);
 			if (number > JS_NUMBER_MAX_VALUE_DOUBLE)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(decimal number)
 		{
 			this.WriteFormatting(JsonToken.Number);
 
-			var len = JsonUtils.DecimalToBuffer(number, outputBuffer, 0, this.Context.Format);
+			var len = JsonUtils.DecimalToBuffer(number, this.buffer, 0, this.Context.Format);
 			if (number > JS_NUMBER_MAX_VALUE_DECIMAL)
-				this.WriteString(new string(outputBuffer, 0, len));
+				this.WriteString(new string(this.buffer, 0, len));
 			else
-				this.WriteJson(outputBuffer, 0, len);
+				this.WriteJson(this.buffer, 0, len);
 		}
+		/// <inheritdoc />
 		public void Write(DateTime dateTime)
 		{
 			this.WriteFormatting(JsonToken.DateTime);
-
-			if (dateTime.Kind == DateTimeKind.Unspecified)
-				dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
 
 			var dateTimeFormat = this.Context.DateTimeFormats.FirstOrDefault() ?? "o";
 			if (dateTimeFormat.IndexOf('z') >= 0 && dateTime.Kind != DateTimeKind.Local)
@@ -193,6 +229,7 @@ namespace GameDevWare.Serialization
 
 			this.Write(dateString);
 		}
+		/// <inheritdoc />
 		public void Write(DateTimeOffset dateTimeOffset)
 		{
 			this.WriteFormatting(JsonToken.DateTime);
@@ -201,6 +238,7 @@ namespace GameDevWare.Serialization
 			var dateString = dateTimeOffset.ToString(dateTimeFormat, this.Context.Format);
 			this.Write(dateString);
 		}
+		/// <inheritdoc />
 		public void Write(bool value)
 		{
 			this.WriteFormatting(JsonToken.Boolean);
@@ -210,35 +248,40 @@ namespace GameDevWare.Serialization
 			else
 				this.WriteJson(False, 0, False.Length);
 		}
+		/// <inheritdoc />
 		public void WriteObjectBegin(int numberOfMembers)
 		{
 			this.WriteFormatting(JsonToken.BeginObject);
 
-			structStack.Push(Structure.IsObject | Structure.IsBegining);
+			this.structStack.Push(Structure.IsObject | Structure.IsStartOfStructure);
 			this.WriteJson(ObjectBegin, 0, ObjectBegin.Length);
 		}
+		/// <inheritdoc />
 		public void WriteObjectEnd()
 		{
 			this.WriteFormatting(JsonToken.EndOfObject);
 
-			structStack.Pop();
+			this.structStack.Pop();
 			this.WriteNewlineAndPad(0);
 			this.WriteJson(ObjectEnd, 0, ObjectEnd.Length);
 		}
+		/// <inheritdoc />
 		public void WriteArrayBegin(int numberOfMembers)
 		{
 			this.WriteFormatting(JsonToken.BeginArray);
 
-			structStack.Push(Structure.IsArray | Structure.IsBegining);
+			this.structStack.Push(Structure.IsArray | Structure.IsStartOfStructure);
 			this.WriteJson(ArrayBegin, 0, ArrayBegin.Length);
 		}
+		/// <inheritdoc />
 		public void WriteArrayEnd()
 		{
 			this.WriteFormatting(JsonToken.EndOfArray);
 
-			structStack.Pop();
+			this.structStack.Pop();
 			this.WriteJson(ArrayEnd, 0, ArrayEnd.Length);
 		}
+		/// <inheritdoc />
 		public void WriteNull()
 		{
 			this.WriteFormatting(JsonToken.Null);
@@ -246,6 +289,7 @@ namespace GameDevWare.Serialization
 			this.WriteJson(Null, 0, Null.Length);
 		}
 
+		/// <inheritdoc />
 		public void Reset()
 		{
 			this.CharactersWritten = 0;
@@ -279,10 +323,10 @@ namespace GameDevWare.Serialization
 				return;
 
 			// it's a begining of container we add padding and remove "is begining" flag
-			if ((stackPeek & Structure.IsBeginingOfContainer) == Structure.IsBeginingOfContainer)
+			if ((stackPeek & Structure.IsStartOfContainer) == Structure.IsStartOfContainer)
 			{
 				stackPeek = this.structStack.Pop();
-				this.structStack.Push(stackPeek ^ Structure.IsBegining); // revert "is begining"
+				this.structStack.Push(stackPeek ^ Structure.IsStartOfStructure); // revert "is begining"
 			}
 			// else if it's new array's value or new object's member put comman and padding
 			else if (!isEndToken)
