@@ -106,8 +106,10 @@ namespace GameDrive
 
             EditorGUILayout.EndToggleGroup();
 #endif
-
-            EditorUtility.SetDirty(_config);
+            if (_config != null)
+            {
+                EditorUtility.SetDirty(_config);
+            }
         }
     }
 }

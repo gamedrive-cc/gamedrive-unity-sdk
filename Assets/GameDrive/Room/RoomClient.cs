@@ -26,6 +26,7 @@ namespace GameDrive.Room
         private Colyseus.Room<T> _colyseusRoom;
 
         private string _roomServiceAddress;
+        public string RoomServiceAddress => _roomServiceAddress;
 
         public Colyseus.Room<T> ColyseusRoom => _colyseusRoom;
 

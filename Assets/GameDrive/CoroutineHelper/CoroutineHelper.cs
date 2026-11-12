@@ -8,9 +8,9 @@ namespace GameDrive
     public class CoroutineHelper : MonoBehaviour
     {
         public static CoroutineHelper Instance;
+        public static Action OnInstanceSet { get; set; }
 
         public bool IsDestroyed { get; private set; }
-        public static Action OnInstanceSet { get; set; }
 
         private void Awake()
         {
