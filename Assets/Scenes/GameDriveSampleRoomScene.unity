@@ -4031,6 +4031,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6227979037278841412, guid: 0d8665355e85642458c051838fbf9f89, type: 3}
+      propertyPath: _gameDriveConfigsObject
+      value: 
+      objectReference: {fileID: 11400000, guid: 61d373f2da653874db47e4a5020a594d, type: 2}
     - target: {fileID: 9140358810029327803, guid: 0d8665355e85642458c051838fbf9f89, type: 3}
       propertyPath: m_Name
       value: GameDriveInitializerGameObject
