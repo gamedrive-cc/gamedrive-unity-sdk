@@ -127,7 +127,7 @@ namespace GameDriveSample
 
                 clients.SetLatestRoomSession(clients.RoomClient.CreateRoomSession());
                 _clientRoomStateManager.TriggerFindClientState();
-                clients.SetDisconnected(true);
+                clients.SetDisconnected(false);
             }, (error) =>
             {
                 Debug.LogError(error);
