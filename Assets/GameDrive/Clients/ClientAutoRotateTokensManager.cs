@@ -108,12 +108,13 @@ namespace GameDrive
             SetRotating(false);
             Authorization.RotateTokens(() =>
             {
+                Debug.Log("GameDrive Rotate Token success");
                 //success
                 SetRotating(false);
             }, (err) =>
             {
                 SetRotating(false);
-                Debug.LogError("ClientAutoRotateTokensManager RotateToken error" + err.ToString());
+                Debug.LogError("GanmeDrive ClientAutoRotateTokensManager RotateToken error" + err.ToString());
             }, _client);
 
             //need to set after because in side Authorization.RotateTokens have yield this condition
